@@ -72,8 +72,19 @@ class Um_die_ecke_gedacht(object):
 
         return cloned_instance
 
+    def check_completed(self):
+        # If the current index is at the end of the last col, or even after the last col, return True
+        if self.current_index[1] == self.num_cols:
+            return True
+        elif self.current_index[1] == self.num_cols - 1 and \
+                self.current_index[0] >= self.num_rows - 1:
+            return True
+        else:
+            return False
+
     def add_first_word(self):
         # Add the first word to the puzzle
+        # Take random one from first words, or a random choice from the preferered words
         if not self.preferred_words:
             first_word = np.random.choice(first_words, 1, replace=False, p=probs)[0]
         else:
@@ -81,20 +92,27 @@ class Um_die_ecke_gedacht(object):
         print(first_word)
         self.add_word(first_word)
 
+
+    # Add a word to the puzzle grid
     def add_word(self, word):
-        # Add a word to the puzzle grid
+        # Add teh wod to the col_words and the used_words
         self.col_words[self.current_index[1]].append(word)
         self.used_words.append(word)
+
+        # Ad it char by char to the grid, and adapt the row dictionaries
         for char_index, char in enumerate(word):
             row_idx = self.current_index[0] + char_index
             self.char_grid[row_idx][self.current_index[1]] = char
             self.current_row_char_dict[row_idx] = self.current_row_char_dict[row_idx][char]
 
+        # Adapt the current index
         self.current_index[0] += len(word)
         current_row, current_col = self.current_index
 
+        # We are close to the end of one column
         if current_row >= self.num_rows - 1:
             if current_row == self.num_rows - 1:
+                # The word has finished one row before the last - just take a random valid character for the last row word
                 list_last_row_chars = self.current_row_char_dict[current_row].keys() - {"Word", "Word_Count"}
                 if list_last_row_chars:
                     next_row_char = np.random.choice(list(list_last_row_chars))
@@ -102,15 +120,20 @@ class Um_die_ecke_gedacht(object):
                     self.current_row_char_dict[current_row] = self.current_row_char_dict[current_row][next_row_char]
 
             for row in range(self.num_rows):
+                # Loop through all rows and check if any row words have been completed
+                # If so, append this word to the row_words and reset the row dictionary to the original state
                 if "Word" in self.current_row_char_dict[row]:
                     row_word = self.current_row_char_dict[row]["Word"]
                     self.row_words[row].append(row_word)
                     self.used_words.append(row_word)
+                    # If we are in any column but the last, take the dictionary with the corresponding maximal word lengths
                     if current_col >= self.num_cols - 2:
                         self.current_row_char_dict[row] = list_char_dicts[-1]
                     else:
+                        # Else, take the whole dictionary, as the character is only relevant for the last col word
                         self.current_row_char_dict[row] = list_char_dicts[self.num_cols - 1 - current_col]
 
+            # If we are close to finishing, print out details every time we add a complete column
             if current_col > self.num_cols * 3/4:
                 print("Column Completed. Current Index was: ", self.current_index)
                 print("Grid: ", self.char_grid)
@@ -122,6 +145,7 @@ class Um_die_ecke_gedacht(object):
 
 # Function to fill the puzzle
 def fill_riddle(riddle_inst):
+    # If we took more than 30 seconds per filled column up to now, restart the riddle
     if (time.time() - riddle_inst.start_time) / (riddle_inst.current_index[1] + 1) > 30:
         riddle_inst = Um_die_ecke_gedacht(riddle_inst.num_rows, riddle_inst.num_cols)
         riddle_inst.add_first_word()
@@ -132,34 +156,41 @@ def fill_riddle(riddle_inst):
     max_word_length = riddle_inst.num_rows - current_row
     relevant_char_dict = list_char_dicts[max_word_length]
 
+    # Find all possible words, that start at the current index and go at most to the end of the column
     find_potential_next_words(riddle_inst, relevant_char_dict, word_beginning="", row_num=current_row,
                               sum_possible_row_words=0)
 
+    # Sort the possible words by their dictionary value, i.e., the number of words they enable in the next columns
     current_relevant_words = sorted(riddle_inst.current_relevant_words, key=riddle_inst.current_relevant_words.get,
                                     reverse=True)
+    # Sort preferred words to the beginning, if there are any
     list_start_with_preferred_words = [word for word in riddle_inst.preferred_words if word in current_relevant_words] + \
                                       [word for word in current_relevant_words if
                                        word not in riddle_inst.preferred_words]
-
+    # If there are no possible words to be filled in, return
     if not current_relevant_words:
         return None
-
+    # Reset the list of current relevant words to be an empty dict
     riddle_inst.current_relevant_words = {}
+    # Loop through all possible next words that are not yet used in the riddle
     for next_word in list_start_with_preferred_words:
         if next_word not in riddle_inst.used_words:
+            # Create a copy of the current riddle_inst and add the new word.
+            # We need a copy to be able to add another word, if the first word failed, without undoing all operations
+            # that are necessarily done when adding a word
             riddle_next_iteration = riddle_inst.clone()
             riddle_next_iteration.add_word(next_word)
 
-            if riddle_next_iteration.current_index[1] == riddle_inst.num_cols:
-                riddle_next_iteration.save_to_csv("Result.csv")
-                return riddle_next_iteration
+            # If the riddle is completely solved, return the completed riddle and save it to a csv file
+            if riddle.check_completed():
+                 riddle_next_iteration.save_to_csv("Result.csv")
+                 return riddle_next_iteration
 
-            if riddle_next_iteration.current_index[1] == riddle_inst.num_cols - 1 and \
-                    riddle_next_iteration.current_index[0] >= riddle_inst.num_rows - 1:
-                riddle_next_iteration.save_to_csv("Result.csv")
-                return riddle_next_iteration
-
+            # Otherwise, recursively call the fill_riddle function with the riddle_next_iteration, iteratively
+            # adding one word at a time
             riddle_filled = fill_riddle(riddle_next_iteration)
+
+            # If a valid solution was returned by the method, return this solution and stop the loop
             if riddle_filled is not None:
                 return riddle_filled
 
@@ -177,6 +208,7 @@ list_of_all_words, word_dict_by_length, word_dict_by_char = create_word_char_dic
 
 # Initialize the puzzle
 riddle = Um_die_ecke_gedacht(num_rows, num_cols)
+# Find the list of potential first words
 find_potential_next_words(riddle, list_char_dicts[max_word_length], word_beginning="", row_num=0,
                           sum_possible_row_words=0)
 first_words = list(riddle.current_relevant_words.keys())
@@ -188,7 +220,7 @@ probs = [x / sum(probs) for x in probs]
 riddle_solution = None
 counter = 0
 while riddle_solution is None:
-    riddle = Um_die_ecke_gedacht(num_rows, num_cols, preferred_words=["rot", "fahrrad", "sattel"])
+    riddle = Um_die_ecke_gedacht(num_rows, num_cols, preferred_words=[])
     riddle.add_first_word()
     print("--------------------")
     print("--------------------")
@@ -198,5 +230,3 @@ while riddle_solution is None:
     counter += 1
 riddle_solution.save_to_csv("Result.csv")
 
-#%%
-riddle_solution.save_to_csv("Result.csv")
