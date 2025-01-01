@@ -1,6 +1,6 @@
 from utils import *  # Import necessary utilities
 
-
+#%%
 # Define the main class for the puzzle
 class Um_die_ecke_gedacht(object):
     def __init__(self, num_rows, num_cols, preferred_words=[]):
@@ -21,14 +21,14 @@ class Um_die_ecke_gedacht(object):
         self.current_row_char_dict = [list_char_dicts[self.num_cols] for _ in range(num_rows)]
 
     def save_to_csv(self, filename):
-        filename = "Riddle_Results/" + filename
+        filepath = "Riddle_Results\\" + filename
         print("Save riddle!")
         # Check if the file already exists
-        if os.path.exists(filename):
+        if os.path.exists(filepath):
             # Get the current date and time
             current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
             # Add the current date and time to the beginning of the filename
-            filename = f"{current_time}_{filename}"
+            filename = f"Riddle_Results\\{current_time}_{filename}"
             print("New Filename: ", filename)
 
         with open(filename, mode='w', newline='') as file:
@@ -75,7 +75,7 @@ class Um_die_ecke_gedacht(object):
     def add_first_word(self):
         # Add the first word to the puzzle
         if not self.preferred_words:
-            first_word = np.random.choice(word_dict_by_length[self.num_rows])
+            first_word = np.random.choice(first_words, 1, replace=False, p=probs)[0]
         else:
             first_word = np.random.choice(self.preferred_words)
         print(first_word)
@@ -111,7 +111,7 @@ class Um_die_ecke_gedacht(object):
                     else:
                         self.current_row_char_dict[row] = list_char_dicts[self.num_cols - 1 - current_col]
 
-            if current_col > 4:
+            if current_col > self.num_cols * 3/4:
                 print("Column Completed. Current Index was: ", self.current_index)
                 print("Grid: ", self.char_grid)
                 print("Row Words: ", self.row_words)
@@ -188,16 +188,15 @@ probs = [x / sum(probs) for x in probs]
 riddle_solution = None
 counter = 0
 while riddle_solution is None:
-    riddle = Um_die_ecke_gedacht(num_rows, num_cols)
-    first_word = np.random.choice(first_words, 1, replace=False, p=probs)[0]
+    riddle = Um_die_ecke_gedacht(num_rows, num_cols, preferred_words=["rot", "fahrrad", "sattel"])
+    riddle.add_first_word()
     print("--------------------")
     print("--------------------")
     print("Iteration: ", counter)
-    print("First word: ", first_word)
     print("--------------------")
-    riddle.add_word(first_word)
     riddle_solution = fill_riddle(riddle)
     counter += 1
+riddle_solution.save_to_csv("Result.csv")
 
 #%%
 riddle_solution.save_to_csv("Result.csv")

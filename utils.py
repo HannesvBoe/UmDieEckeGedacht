@@ -8,10 +8,10 @@ import time
 import random
 
 # Load the word list from a CSV file
-#word_list = pd.read_csv("data/wordlist-german.txt", names=["Wort"], header=None)["Wort"].dropna().tolist()
+#word_list = pd.read_csv("data/Filtered_Wordlist_German.csv", header=True)["Wort"].dropna().tolist()
 
 word_list_input = pd.read_csv(
-    "data/Wortliste.csv",
+    "data\\Wortliste.csv",
     delimiter=" ",
     encoding="ISO-8859-1",
     skiprows=43,
@@ -62,7 +62,6 @@ def isValidWord(text, max_length):
     return (
             2 <= len(text) <= max_length and
             text.isalpha() and
-            text[0].isupper() and
             not text[1:].isupper()
     )
 
