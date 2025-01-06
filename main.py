@@ -77,7 +77,7 @@ class UmDieEckeGedacht(object):
 
     def clone(self):
         # Create a new instance of the class
-        cloned_instance = UmDieEckeGedacht(self.num_rows, self.num_cols)
+        cloned_instance = UmDieEckeGedacht(self.num_rows, self.num_cols, self.preferred_words)
 
         # Copy all attributes from the current instance to the cloned instance
         cloned_instance.char_grid = [row[:] for row in self.char_grid]
@@ -193,7 +193,7 @@ class UmDieEckeGedacht(object):
     def fill_riddle(self):
         # If we took more than 30 seconds per filled column up to now, restart the riddle
         if (time.time() - self.start_time) / (self.current_index[1] + 1) > 30:
-            self = UmDieEckeGedacht(self.num_rows, self.num_cols)
+            self = UmDieEckeGedacht(self.num_rows, self.num_cols, self.preferred_words)
             self.add_first_word()
             self.start_time = time.time()
             print("New riddle generated")
