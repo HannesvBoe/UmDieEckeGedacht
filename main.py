@@ -156,11 +156,12 @@ class UmDieEckeGedacht(object):
                             self.current_row_char_dict[row] = list_char_dicts[self.num_cols - 1 - current_col]
 
             # If we are close to finishing, print out details every time we add a complete column
-            if current_col > self.num_cols * 3 / 4:
-                print("Column Completed. Current Index was: ", self.current_index)
-                print("Grid: ", self.char_grid)
-                print("Row Words: ", self.row_words)
-                print("New col words:", self.col_words[current_col])
+            # Only relevant for debugging
+            # if current_col > self.num_cols * 3 / 4:
+            #     print("Column Completed. Current Index was: ", self.current_index)
+            #     print("Grid: ", self.char_grid)
+            #     print("Row Words: ", self.row_words)
+            #     print("New col words:", self.col_words[current_col])
 
             self.current_index = [0, current_col + 1]
 
@@ -219,7 +220,7 @@ class UmDieEckeGedacht(object):
         # If there are no possible words to be filled in, return
         if not current_relevant_words:
             return None
-        # Reset the list of current relevant words to be an empty dict
+        # Reset the current relevant words to be an empty dict
         self.current_relevant_words = {}
         # Loop through all possible next words that are not yet used in the riddle
         for next_word in list_start_with_preferred_words:
