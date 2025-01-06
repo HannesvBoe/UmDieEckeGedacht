@@ -34,7 +34,7 @@ class UmDieEckeGedacht(object):
         self.current_index = [0, 0]
         self.current_relevant_words = {}
         self.used_words = []
-        self.preferred_words = sorted(preferred_words, key=len)
+        self.preferred_words = sorted([s.lower() for s in preferred_words], key=len)
         self.start_time = time.time()
 
         # Initialize row character dictionaries
@@ -114,7 +114,7 @@ class UmDieEckeGedacht(object):
 
     # Add a word to the puzzle grid
     def add_word(self, next_word):
-        # Add teh wod to the col_words and the used_words
+        # Add the word to the col_words and the used_words
         self.col_words[self.current_index[1]].append(next_word)
         self.used_words.append(next_word)
 
@@ -140,17 +140,20 @@ class UmDieEckeGedacht(object):
 
             for row in range(self.num_rows):
                 # Loop through all rows and check if any row words have been completed
-                # If so, append this word to the row_words and reset the row dictionary to the original state
-                if "Word" in self.current_row_char_dict[row]:
-                    row_word = self.current_row_char_dict[row]["Word"]
-                    self.row_words[row].append(row_word)
-                    self.used_words.append(row_word)
-                    # If we are in any column but the last, take the dictionary with the corresponding maximal word lengths
-                    if current_col >= self.num_cols - 2:
-                        self.current_row_char_dict[row] = list_char_dicts[-1]
-                    else:
-                        # Else, take the whole dictionary, as the character is only relevant for the last col word
-                        self.current_row_char_dict[row] = list_char_dicts[self.num_cols - 1 - current_col]
+                current_row_dict = self.current_row_char_dict[row]
+                if "Word" in current_row_dict:
+                    # Add the word if it is longer than two characters or we are already at the last colums
+                    if (len(current_row_dict["Word"]) > 2) | (current_col > self.num_cols - 2):
+                        # If so, append this word to the row_words and reset the row dictionary to the original state
+                        row_word = self.current_row_char_dict[row]["Word"]
+                        self.row_words[row].append(row_word)
+                        self.used_words.append(row_word)
+                        # If we are in any column but the last, take the dictionary with the corresponding maximal word lengths
+                        if current_col >= self.num_cols - 2:
+                            self.current_row_char_dict[row] = list_char_dicts[-1]
+                        else:
+                            # Else, take the whole dictionary, as the character is only relevant for the last col word
+                            self.current_row_char_dict[row] = list_char_dicts[self.num_cols - 1 - current_col]
 
             # If we are close to finishing, print out details every time we add a complete column
             if current_col > self.num_cols * 3 / 4:
@@ -258,7 +261,8 @@ probs = [x / sum(probs) for x in probs]
 riddle_solution = None
 counter = 0
 while riddle_solution is None:
-    riddle = UmDieEckeGedacht(num_rows, num_cols, preferred_words=[])
+    riddle = UmDieEckeGedacht(num_rows, num_cols, preferred_words=["Fahrrad", "Sattel", "Lenker", "Pedale",
+                                                                   "Fahrradtour", "Weltreise", "Zelt", "Camping"])
     riddle.add_first_word(first_words, probs)
     print("--------------------")
     print("--------------------")
