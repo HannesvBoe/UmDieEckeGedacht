@@ -4,11 +4,9 @@ from datetime import datetime
 import csv
 import time
 
-
-# %%
 from create_word_list import *
 
-word_list = read_word_list(use_long_list=False)
+word_list = read_word_list(rel_word_importance_cutoff = 17, use_long_list=False)
 
 # Initialize the puzzle parameters
 num_rows = 10
@@ -108,7 +106,8 @@ class UmDieEckeGedacht(object):
         if not self.preferred_words:
             first_word = np.random.choice(first_words, 1, replace=False, p=probs)[0]
         else:
-            first_word = np.random.choice(self.preferred_words)
+            potential_first_preferred_words = [w for w in self.preferred_words if len(w) <= self.num_rows]
+            first_word = np.random.choice(potential_first_preferred_words)
         print("Chosen first word: ", first_word)
         self.add_word(first_word)
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-def read_word_list(use_long_list = False):
+def read_word_list(rel_word_importance_cutoff, use_long_list = False):
     if use_long_list:
         # Load the word list from a CSV file
         word_list = pd.read_csv("data/Filtered_Wordlist_German.csv", header=True)["Wort"].dropna().tolist()
@@ -15,10 +15,7 @@ def read_word_list(use_long_list = False):
         )
 
         # Filter rows based on specific conditions
-        filtered_word_list = word_list_input[
-            ((word_list_input["Häufigkeit"] < 15) | (word_list_input["Wort"].str.len() >= 5))
-            & (word_list_input["Häufigkeit"] < 21)
-            ]
+        filtered_word_list = word_list_input[word_list_input["Häufigkeit"] <= rel_word_importance_cutoff]
 
         # Convert the DataFrame to a list, excluding NaN values
         word_list = filtered_word_list[filtered_word_list["Wort"] != "nan"]["Wort"].dropna().tolist()
