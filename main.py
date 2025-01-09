@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import csv
 import time
+from PIL import Image, ImageDraw, ImageFont
 
 from create_word_list import *
 
@@ -37,41 +38,6 @@ class UmDieEckeGedacht(object):
 
         # Initialize row character dictionaries
         self.current_row_char_dict = [list_char_dicts[self.num_cols] for _ in range(num_rows)]
-
-    def save_to_csv(self, filename):
-        filepath = "Riddle_Results\\" + filename
-        print("Save riddle!")
-        # Check if the file already exists
-        if os.path.exists(filepath):
-            # Get the current date and time
-            current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-            # Add the current date and time to the beginning of the filename
-            filename = f"Riddle_Results\\{current_time}_{filename}"
-            print("New Filename: ", filename)
-
-        with open(filename, mode='w', newline='') as file:
-            writer = csv.writer(file)
-
-            # Write char_grid
-            writer.writerow(['char_grid'])
-            for row in self.char_grid:
-                writer.writerow(row)
-
-            # Write a separator
-            writer.writerow([])
-
-            # Write row_words
-            writer.writerow(['row_words'])
-            for row in self.row_words:
-                writer.writerow(row)
-
-            # Write a separator
-            writer.writerow([])
-
-            # Write col_words
-            writer.writerow(['col_words'])
-            for col in self.col_words:
-                writer.writerow(col)
 
     def clone(self):
         # Create a new instance of the class
@@ -244,6 +210,132 @@ class UmDieEckeGedacht(object):
 
         return None
 
+    def save_riddle(self, riddle_name):
+        folder = "Riddle_Results\\" + riddle_name
+        print("Save riddle!")
+        # Check if the file already exists
+        if os.path.exists(folder):
+            # Get the current date and time
+            current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Add the current date and time to the beginning of the filename
+            folder = f"Riddle_Results\\" + current_time
+            print("New Folder: ", folder)
+
+        os.makedirs(folder)
+
+        filename = folder + "\\riddle_description.csv"
+        with open(filename, mode='w', newline='') as file:
+            writer = csv.writer(file)
+
+            # Write char_grid
+            writer.writerow(['char_grid'])
+            for row in self.char_grid:
+                writer.writerow(row)
+
+            # Write a separator
+            writer.writerow([])
+
+            # Write row_words
+            writer.writerow(['row_words'])
+            for row in self.row_words:
+                writer.writerow(row)
+
+            # Write a separator
+            writer.writerow([])
+
+            # Write col_words
+            writer.writerow(['col_words'])
+            for col in self.col_words:
+                writer.writerow(col)
+
+        self.save_riddle_as_png(folder)
+
+    def save_riddle_as_png(self, folder_name):
+        cell_size = 40
+        image_width = num_cols * cell_size
+        image_height = num_rows * cell_size
+        row_words = self.row_words
+        col_words = self.col_words
+        char_grid = self.char_grid
+        counter_col_words = 0
+        counter_row_words = 0
+
+        # Create a new image with white background
+        image_filled = Image.new('RGB', (image_width, image_height), 'white')
+        image_empty = Image.new('RGB', (image_width, image_height), 'white')
+        draw_filled = ImageDraw.Draw(image_filled)
+        draw_empty = ImageDraw.Draw(image_empty)
+
+        # Define the font
+        try:
+            font = ImageFont.truetype("arial.ttf", 20)
+            small_font = ImageFont.truetype("arial.ttf", 10)
+        except IOError:
+            font = ImageFont.load_default()
+            small_font = ImageFont.load_default()
+
+        # Draw the grid and characters
+        for row in range(num_rows):
+            for col in range(num_cols):
+                x0 = col * cell_size
+                y0 = row * cell_size
+                x1 = x0 + cell_size
+                y1 = y0 + cell_size
+                draw_filled.rectangle([x0, y0, x1, y1], outline='black')
+                draw_empty.rectangle([x0, y0, x1, y1], outline='black')
+                char = char_grid[row][col]
+                bbox = draw_filled.textbbox((0, 0), char, font=font)
+                w = bbox[2] - bbox[0]  # width
+                h = bbox[3] - bbox[1]  # height
+                draw_filled.text((x0 + (cell_size - w) / 2, y0 + (cell_size - h) / 2), char, fill='black', font=font)
+
+        # Draw bold lines between words
+        def draw_bold_line(draw, x0, y0, x1, y1):
+            for offset in range(-1, 2):
+                draw.line([x0 + offset, y0, x1 + offset, y1], fill='black', width=3)
+                draw.line([x0, y0 + offset, x1, y1 + offset], fill='black', width=3)
+
+        # Draw bold vertical lines after each row word
+        for row in range(num_rows):
+            for word in row_words[row]:
+                col_start = ''.join(char_grid[row]).find(word)
+                col_end = col_start + len(word)
+                x0 = col_end * cell_size
+                y0 = row * cell_size
+                x1 = x0
+                y1 = y0 + cell_size
+                # Add the row word indices in the top left corner
+                draw_filled.text((col_start * cell_size + 5, y0 + 2), str(counter_row_words + 1), fill='blue',
+                                 font=small_font)
+                draw_empty.text((col_start * cell_size + 5, y0 + 2), str(counter_row_words + 1), fill='blue',
+                                font=small_font)
+                counter_row_words += 1
+                if col_end < num_cols:
+                    draw_bold_line(draw_filled, x0, y0, x1, y1)
+                    draw_bold_line(draw_empty, x0, y0, x1, y1)
+
+        # Draw bold horizontal lines after each column word
+        for col in range(num_cols):
+            for word in col_words[col]:
+                row_start = ''.join([char_grid[r][col] for r in range(num_rows)]).find(word)
+                row_end = row_start + len(word)
+                x0 = col * cell_size
+                y0 = row_end * cell_size
+                x1 = x0 + cell_size
+                y1 = y0
+                # Add the row word indices in the top left corner
+                draw_filled.text((x0 + cell_size - 15, row_start * cell_size + 2), str(counter_col_words + 1),
+                                 fill='red', font=small_font)
+                draw_empty.text((x0 + cell_size - 15, row_start * cell_size + 2), str(counter_col_words + 1),
+                                fill='red', font=small_font)
+                counter_col_words += 1
+                if row_end < num_rows:
+                    draw_bold_line(draw_filled, x0, y0, x1, y1)
+                    draw_bold_line(draw_empty, x0, y0, x1, y1)
+
+        # Save the image
+        image_filled.save(folder_name + '\\crossword_filled.jpg')
+        image_empty.save(folder_name + '\\crossword_empty.jpg')
 
 # %%
 
@@ -261,8 +353,7 @@ probs = [x / sum(probs) for x in probs]
 riddle_solution = None
 counter = 0
 while riddle_solution is None:
-    riddle = UmDieEckeGedacht(num_rows, num_cols, preferred_words=["Fahrrad", "Sattel", "Lenker", "Pedale",
-                                                                   "Fahrradtour", "Weltreise", "Zelt", "Camping"])
+    riddle = UmDieEckeGedacht(num_rows, num_cols, preferred_words=[])
     riddle.add_first_word(first_words, probs)
     print("--------------------")
     print("--------------------")
@@ -270,4 +361,4 @@ while riddle_solution is None:
     print("--------------------")
     riddle_solution = riddle.fill_riddle()
     counter += 1
-riddle_solution.save_to_csv("Result.csv")
+riddle_solution.save_riddle("Test_png")
